@@ -2,7 +2,7 @@
 
 **Machines that negotiate their own data prices, settled via x402 on Base.**
 
-Metron is a negotiation and settlement layer for live financial and on-chain intelligence. Buyer agents propose a price, providers accept, counter at their real cost floor, or reject — and once a price is agreed, payment settles through the x402 protocol on Base mainnet via Coinbase's hosted facilitator, with delivery and settlement happening in a single HTTP call, with zero manual intervention.
+Metron is a negotiation and settlement layer for live financial and on-chain intelligence. Buyer agents propose a price, providers accept, counter at their real cost floor, or reject  and once a price is agreed, payment settles through the x402 protocol on Base mainnet via Coinbase's hosted facilitator, with delivery and settlement happening in a single HTTP call, with zero manual intervention.
 
 ---
 
@@ -30,9 +30,9 @@ Metron is a negotiation and settlement layer for live financial and on-chain int
 
 Most machine-readable data APIs charge a single flat price per call, regardless of what a given request is actually worth, overcharging low-value queries and underpricing high-value ones, with no way for either side to signal what they're willing to pay or accept.
 
-Metron lets AI agents negotiate their own data prices in real time, for live financial and on-chain intelligence — BTC cycle regime data, short-squeeze risk, and analyst momentum signals — and settles every agreed price directly on Base mainnet via x402.
+Metron lets AI agents negotiate their own data prices in real time, for live financial and on-chain intelligence, BTC cycle regime data, short-squeeze risk, and analyst momentum signals and settles every agreed price directly on Base mainnet via x402.
 
-## Why this exists — the problem
+## Why this exists - the problem
 
 Real-time financial and on-chain intelligence, the kind Bloomberg Terminal, Glassnode, and Nansen charge thousands a month for, is out of reach for most AI agents and independent traders. Cost isn't the only problem: even affordable APIs typically charge one flat rate per call, which overprices simple requests and underprices premium ones, and gives neither side a way to signal what a request is actually worth.
 
@@ -40,18 +40,18 @@ Metron replaces the flat-price model with real negotiation, and settles through 
 
 ## How it works
 
-1. **Propose** — A buyer agent sends a proposed price for a data tool (BTC Cycle Regime, Entry Risk, LTH Behavior, NUPL Sentiment, Squeeze Risk, Analyst Momentum, and others) to Metron's `/quote` endpoint.
-2. **Negotiate** — The seller's deterministic pricing engine accepts outright, counters at its real cost floor with a reason, or rejects — bounded to a few rounds per session.
-3. **Settle** — Once a price is agreed, the buyer's wallet signs an EIP-3009 payment authorization and sends it as a header on `GET /pay/:id`. Coinbase's hosted x402 facilitator verifies and settles the payment directly on Base mainnet — no separate escrow contract, no on-chain transaction from the buyer's side at all.
-4. **Deliver** — Once the facilitator confirms settlement, the same request returns the real intelligence data — payment and delivery happen in a single round trip, with no human in the loop.
-5. **Verify** — Every settlement's real payer address and transaction hash come from the facilitator's own settle response, checkable independently on [Basescan](https://basescan.org).
+1. **Propose** - A buyer agent sends a proposed price for a data tool (BTC Cycle Regime, Entry Risk, LTH Behavior, NUPL Sentiment, Squeeze Risk, Analyst Momentum, and others) to Metron's `/quote` endpoint.
+2. **Negotiate** - The seller's deterministic pricing engine accepts outright, counters at its real cost floor with a reason, or rejects — bounded to a few rounds per session.
+3. **Settle** - Once a price is agreed, the buyer's wallet signs an EIP-3009 payment authorization and sends it as a header on `GET /pay/:id`. Coinbase's hosted x402 facilitator verifies and settles the payment directly on Base mainnet — no separate escrow contract, no on-chain transaction from the buyer's side at all.
+4. **Deliver** - Once the facilitator confirms settlement, the same request returns the real intelligence data — payment and delivery happen in a single round trip, with no human in the loop.
+5. **Verify** - Every settlement's real payer address and transaction hash come from the facilitator's own settle response, checkable independently on [Basescan](https://basescan.org).
 
 ## AI-native pricing
 
 Metron has two negotiation modes:
 
-- **Human-typed price** — a person proposes the price directly.
-- **AI agent** — a bounded LLM is given a natural-language question and a policy (max budget, acceptable price range). It selects the right tool, reasons about the market price, and proposes both an **opening offer** and a **walk-away ceiling** — a genuine economic decision, not text generation for a human to act on afterward.
+- **Human-typed price** - a person proposes the price directly.
+- **AI agent** - a bounded LLM is given a natural-language question and a policy (max budget, acceptable price range). It selects the right tool, reasons about the market price, and proposes both an **opening offer** and a **walk-away ceiling** — a genuine economic decision, not text generation for a human to act on afterward.
 
 The AI's proposed values are then **hard-clamped in code**, not just by prompt: the opening offer and walk-away ceiling can never exceed the caller's stated `maxBudget`, regardless of what the model reasons toward. This is proven by a deterministic unit test (`clampToPolicy()`), independent of any live model behavior, so the budget guarantee holds even in cases live testing never happened to exercise.
 
