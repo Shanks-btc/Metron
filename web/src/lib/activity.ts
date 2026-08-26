@@ -1,0 +1,95 @@
+export const ACTIVITY_API_URL = process.env.QUOTE_API_URL ?? "http://localhost:3000";
+
+export const TOOL_LABELS: Record<string, string> = {
+  get_btc_cycle_regime: "BTC Cycle Regime",
+  get_entry_risk: "Entry Risk",
+  get_lth_behavior: "LTH Behavior",
+  compare_to_2021_top: "Compare to 2021 Top",
+  get_nupl_sentiment: "NUPL Sentiment",
+  get_squeeze_risk: "Squeeze Risk",
+  compare_squeeze_risk: "Compare Squeeze Risk",
+  get_analyst_momentum: "Analyst Momentum",
+  compare_analyst_momentum: "Compare Analyst Momentum",
+  screen_analyst_momentum: "Screen Analyst Momentum",
+};
+
+// Which tools belong to which seller - /pricing doesn't expose a provider
+// field per tool, so this mirrors TOOL_LABELS's existing pattern of
+// frontend-owned tool metadata rather than adding a backend dependency for
+// what's purely a presentation concern.
+export const SELLER_TOOLS: Record<string, string[]> = {
+  "BTC Cycle Intelligence": [
+    "get_btc_cycle_regime",
+    "get_entry_risk",
+    "get_lth_behavior",
+    "compare_to_2021_top",
+    "get_nupl_sentiment",
+  ],
+  "Short Squeeze Intelligence": ["get_squeeze_risk", "compare_squeeze_risk"],
+  "Analyst Momentum": ["get_analyst_momentum", "compare_analyst_momentum", "screen_analyst_momentum"],
+};
+
+export interface ActivityRecord {
+  quoteId: string | null;
+  negotiationId: string;
+  round: number;
+  tool: string;
+  decision: "accepted" | "countered" | "rejected";
+  agreedPrice: number | null;
+  createdAt: string;
+  state: "OPEN" | "PROCESSING" | "FULFILLED" | null;
+  payerAddress: string | null;
+}
+
+// Server-side fetch (runs on the Next.js server, not in the browser) so this
+// isn't subject to the real backend's CORS policy the way a client-side
+// fetch would be. cache: "no-store" keeps this live on every request rather
+// than baking a snapshot in at build time.
+export async function getActivity(limit = 100): Promise<ActivityRecord[]> {
+  try {
+    const res = await fetch(`${ACTIVITY_API_URL}/activity?limit=${limit}`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return (await res.json()) as ActivityRecord[];
+  } catch {
+    return [];
+  }
+}
+
+// Fetches a single provider's own recent activity directly, scoped by
+// ?tool= server-side (see server.ts's /activity handler) - not a slice of
+// a shared, all-tools window. A low-volume provider's real settled deals
+// can otherwise silently fall out of a fixed-size combined window as soon
+// as enough unrelated higher-volume tools accumulate more recent activity
+// than the window size (this is exactly what happened to Short Squeeze
+// Intelligence's real 2026-07-10 settlements once other tools' traffic
+// pushed them past a shared top-100 cutoff). Scoping the fetch itself
+// means every provider is guaranteed to see its own most recent events
+// regardless of how much other providers' traffic exists.
+export async function getActivityForTools(tools: string[], limit = 20): Promise<ActivityRecord[]> {
+  try {
+    const res = await fetch(
+      `${ACTIVITY_API_URL}/activity?limit=${limit}&tool=${encodeURIComponent(tools.join(","))}`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return [];
+    return (await res.json()) as ActivityRecord[];
+  } catch {
+    return [];
+  }
+}
+
+// Collapses raw /activity rows (one per round) down to one row per
+// negotiation session - the latest round for that negotiationId - since
+// /activity is already sorted newest-first, the first occurrence of a given
+// negotiationId in the array is that session's most recent (final) state.
+export function summarizeSessions(rows: ActivityRecord[]): ActivityRecord[] {
+  const seen = new Set<string>();
+  const sessions: ActivityRecord[] = [];
+  for (const row of rows) {
+    if (!seen.has(row.negotiationId)) {
+      seen.add(row.negotiationId);
+      sessions.push(row);
+    }
+  }
+  return sessions;
+}
