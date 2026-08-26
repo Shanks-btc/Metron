@@ -29,15 +29,19 @@ import Anthropic from "@anthropic-ai/sdk";
 // Real deployment gotcha, not hypothetical: this module self-calls the
 // server's own /ask and /quote endpoints over real HTTP (see askServer()/
 // callQuote() below), so it needs to know the server's own real address.
-// The "localhost:3000" fallback only works where the server also happens to
-// be listening on 3000 - true for local dev, false on Railway (and any
-// platform that assigns its own PORT), where server.ts binds to
-// process.env.PORT, not 3000. Deployed, this MUST be set explicitly to
-// `http://localhost:${{PORT}}` (Railway's own variable-reference syntax,
-// resolving to whatever port the container actually binds) - not left to
-// this default - or every /agent-quote call fails with connection refused,
-// since nothing is listening on 3000 in that container.
-const NEGOTIATOR_URL = process.env.NEGOTIATOR_URL ?? "http://localhost:3000";
+// A bare "localhost:3000" fallback would only work where the server also
+// happens to be listening on exactly 3000 - true for local dev, false on
+// Railway (and any platform that assigns its own PORT), where server.ts
+// binds to process.env.PORT instead. Reading process.env.PORT directly
+// here - the same env var server.ts itself reads for app.listen() - self-
+// heals against whatever port this same process actually bound to, with no
+// platform-specific config needed anywhere: tried a Railway
+// variable-reference (`NEGOTIATOR_URL=http://localhost:${{PORT}}`) first,
+// but that only resolves once a public domain/port exists for the service,
+// making it an unreliable ordering dependency - reading the same process's
+// own env var directly has no such ordering problem, since both this module
+// and server.ts's app.listen() read it from the exact same process.
+const NEGOTIATOR_URL = process.env.NEGOTIATOR_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
 
 let client: Anthropic | undefined;
 
