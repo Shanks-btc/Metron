@@ -26,6 +26,17 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 
+// Real deployment gotcha, not hypothetical: this module self-calls the
+// server's own /ask and /quote endpoints over real HTTP (see askServer()/
+// callQuote() below), so it needs to know the server's own real address.
+// The "localhost:3000" fallback only works where the server also happens to
+// be listening on 3000 - true for local dev, false on Railway (and any
+// platform that assigns its own PORT), where server.ts binds to
+// process.env.PORT, not 3000. Deployed, this MUST be set explicitly to
+// `http://localhost:${{PORT}}` (Railway's own variable-reference syntax,
+// resolving to whatever port the container actually binds) - not left to
+// this default - or every /agent-quote call fails with connection refused,
+// since nothing is listening on 3000 in that container.
 const NEGOTIATOR_URL = process.env.NEGOTIATOR_URL ?? "http://localhost:3000";
 
 let client: Anthropic | undefined;

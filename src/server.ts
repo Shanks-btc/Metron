@@ -26,15 +26,22 @@ import { hashReasoningRecord } from "./reasoningHash.ts";
 const app = express();
 app.use(express.json());
 // Allows the web/ frontend (localhost:3001, later its production domain) to
-// call this API directly from the browser. Wide open for local development -
-// restrict this to the actual production frontend origin before public
-// deployment. exposedHeaders is required so browser JS can actually read
-// these two custom response headers via fetch's Response.headers - without
-// it the request succeeds but the headers are invisible to client code,
-// even same-origin-looking code, per the CORS spec's default header allowlist.
-// Header names are unchanged from the v1/Circle-era x402 protocol shape -
-// the v2 spec (@x402/core) still uses PAYMENT-REQUIRED/PAYMENT-RESPONSE.
-app.use(cors({ exposedHeaders: ["PAYMENT-REQUIRED", "PAYMENT-RESPONSE"] }));
+// call this API directly from the browser. CORS_ORIGIN is unset by default
+// (wide open, current dev behavior - the `cors` package defaults to
+// reflecting "*" when no `origin` key is passed at all) - set it to the
+// real deployed frontend's origin once that domain exists to restrict
+// cross-origin access to just that site. exposedHeaders is required so
+// browser JS can actually read these two custom response headers via
+// fetch's Response.headers - without it the request succeeds but the
+// headers are invisible to client code, even same-origin-looking code, per
+// the CORS spec's default header allowlist. Header names are unchanged from
+// the v1/Circle-era x402 protocol shape - the v2 spec (@x402/core) still
+// uses PAYMENT-REQUIRED/PAYMENT-RESPONSE.
+const corsOptions: cors.CorsOptions = { exposedHeaders: ["PAYMENT-REQUIRED", "PAYMENT-RESPONSE"] };
+if (process.env.CORS_ORIGIN) {
+  corsOptions.origin = process.env.CORS_ORIGIN;
+}
+app.use(cors(corsOptions));
 
 const SELLER_ADDRESS = process.env.SELLER_ADDRESS as `0x${string}` | undefined;
 
