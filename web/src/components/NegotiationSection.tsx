@@ -369,6 +369,11 @@ export default function NegotiationSection() {
       setSettlementTxHash(result.transactionHash);
       await appendLine(`> Buyer: ${result.buyer}`);
       await appendLine(`> ${result.responseBody.message}`);
+      await appendLine(
+        typeof result.responseBody.data === "string"
+          ? result.responseBody.data
+          : JSON.stringify(result.responseBody.data, null, 2)
+      );
       setPayState("settled");
     } catch (err: any) {
       await appendLine(`> Payment failed — ${err?.message ?? "unknown error"}`);
